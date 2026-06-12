@@ -1,5 +1,5 @@
 import { createServer } from "node:http"
-import { existsSync, readFileSync, mkdirSync, appendFileSync } from "node:fs"
+import { existsSync, readFileSync, mkdirSync, appendFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
@@ -8,6 +8,7 @@ const PROJECT_DIR = "C:/Users/diego/OneDrive/Documentos/commandcode-go-shim"
 const ENV_FILE = join(PROJECT_DIR, ".env.local")
 const LOG_DIR = join(PROJECT_DIR, "logs")
 const LOG_FILE = join(LOG_DIR, "shim.log")
+const COMPAT_FILE = join(PROJECT_DIR, "compatibility.json")
 
 loadEnvFile(ENV_FILE)
 
@@ -16,6 +17,8 @@ const PORT = Number(process.env.SHIM_PORT || "4310")
 const COMMANDCODE_API_KEY = process.env.COMMANDCODE_API_KEY || ""
 const COMMANDCODE_BASE_URL = (process.env.COMMANDCODE_BASE_URL || "https://api.commandcode.ai").replace(/\/+$/, "")
 const COMMANDCODE_VERSION = process.env.COMMANDCODE_VERSION || "0.32.2"
+const COMPAT_REFRESH_HOURS = 6
+const COMPAT_REFRESH_MS = COMPAT_REFRESH_HOURS * 60 * 60 * 1000
 
 const MODELS = [
   ["moonshotai/Kimi-K2.6", "Kimi K2.6"],
@@ -33,6 +36,8 @@ const MODELS = [
 ]
 
 const MODEL_SET = new Set(MODELS.map(([id]) => id))
+let compatibilityMatrix = loadCompatibilityMatrix()
+let compatibilityRefreshRunning = false
 
 if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true })
 
@@ -55,7 +60,12 @@ const server = createServer(async (req, res) => {
         host: HOST,
         port: PORT,
         models: MODELS.map(([id, name]) => ({ id, name })),
+        compatibility_updated_at: compatibilityMatrix.updated_at || null,
       })
+    }
+
+    if (req.method === "GET" && url.pathname === "/compatibility") {
+      return json(res, 200, compatibilityMatrix)
     }
 
     if (req.method === "GET" && url.pathname === "/v1/models") {
@@ -103,6 +113,7 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   log(`LISTEN http://${HOST}:${PORT}`)
   console.log(`commandcode-go-shim listening on http://${HOST}:${PORT}`)
+  scheduleCompatibilityRefresh()
 })
 
 async function callCommandCodeAlpha(body, model) {
@@ -685,6 +696,144 @@ function writeSSE(res, payload) {
 
 function log(line) {
   appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${line}\n`)
+}
+
+function loadCompatibilityMatrix() {
+  try {
+    if (!existsSync(COMPAT_FILE)) {
+      return {
+        updated_at: null,
+        refresh_interval_hours: COMPAT_REFRESH_HOURS,
+        models: {},
+      }
+    }
+    const parsed = JSON.parse(readFileSync(COMPAT_FILE, "utf8"))
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed
+  } catch (error) {
+    log(`COMPAT load_error ${error instanceof Error ? error.message : String(error)}`)
+  }
+  return {
+    updated_at: null,
+    refresh_interval_hours: COMPAT_REFRESH_HOURS,
+    models: {},
+  }
+}
+
+function saveCompatibilityMatrix() {
+  requireWriteFileJson(COMPAT_FILE, compatibilityMatrix)
+}
+
+function scheduleCompatibilityRefresh() {
+  void maybeRefreshCompatibility("startup")
+  setInterval(() => {
+    void maybeRefreshCompatibility("interval")
+  }, COMPAT_REFRESH_MS)
+}
+
+async function maybeRefreshCompatibility(reason) {
+  if (compatibilityRefreshRunning) return
+  const updatedAt = compatibilityMatrix.updated_at ? Date.parse(compatibilityMatrix.updated_at) : 0
+  const stale = !updatedAt || Number.isNaN(updatedAt) || (Date.now() - updatedAt >= COMPAT_REFRESH_MS)
+  if (!stale && reason !== "startup-force") return
+
+  compatibilityRefreshRunning = true
+  log(`COMPAT refresh_start reason=${reason}`)
+  try {
+    const next = {
+      updated_at: new Date().toISOString(),
+      refresh_interval_hours: COMPAT_REFRESH_HOURS,
+      models: {},
+    }
+
+    for (const [id, name] of MODELS) {
+      next.models[id] = await testModelCompatibility(id, name)
+    }
+
+    compatibilityMatrix = next
+    saveCompatibilityMatrix()
+    log(`COMPAT refresh_done models=${Object.keys(next.models).length}`)
+  } catch (error) {
+    log(`COMPAT refresh_error ${error instanceof Error ? error.stack || error.message : String(error)}`)
+  } finally {
+    compatibilityRefreshRunning = false
+  }
+}
+
+async function testModelCompatibility(model, displayName) {
+  const summary = {
+    name: displayName,
+    tested_at: new Date().toISOString(),
+    status: "unknown",
+    text: { ok: false, output_chars: 0 },
+    reasoning: { ok: false, chars: 0 },
+    tools: { ok: false, calls: 0 },
+    notes: [],
+  }
+
+  try {
+    const textRun = await callCommandCodeAlpha({
+      messages: [{ role: "user", content: "Reply exactly: OK" }],
+      stream: false,
+      max_tokens: 64,
+    }, model)
+    const text = collectText(textRun.events).trim()
+    summary.text = { ok: text.length > 0, output_chars: text.length }
+    if (!text.length) summary.notes.push("No devolvió texto en prompt mínimo.")
+  } catch (error) {
+    summary.notes.push(`Text error: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  try {
+    const reasoningRun = await callCommandCodeAlpha({
+      messages: [{ role: "user", content: "Think step by step and answer 17*19. Keep the final answer short." }],
+      stream: false,
+      max_tokens: 256,
+    }, model)
+    const reasoning = collectReasoning(reasoningRun.events)
+    summary.reasoning = { ok: reasoning.length > 0, chars: reasoning.length }
+    if (!reasoning.length) summary.notes.push("No emitió reasoning visible.")
+  } catch (error) {
+    summary.notes.push(`Reasoning error: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  try {
+    const tool = {
+      type: "function",
+      function: {
+        name: "echo",
+        description: "Echo text",
+        parameters: {
+          type: "object",
+          properties: { text: { type: "string" } },
+          required: ["text"],
+        },
+      },
+    }
+    const toolRun = await callCommandCodeAlpha({
+      messages: [{ role: "user", content: "Use the echo tool with text hello and no other text." }],
+      tools: [tool],
+      tool_choice: "auto",
+      stream: false,
+      max_tokens: 128,
+    }, model)
+    const toolCalls = collectToolCalls(toolRun.events)
+    summary.tools = { ok: toolCalls.length > 0, calls: toolCalls.length }
+    if (!toolCalls.length) summary.notes.push("No emitió tool calls.")
+  } catch (error) {
+    summary.notes.push(`Tools error: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  const capabilities = [summary.text.ok, summary.reasoning.ok, summary.tools.ok].filter(Boolean).length
+  summary.status =
+    capabilities === 3 ? "ok"
+    : capabilities > 0 ? "degraded"
+    : "broken"
+
+  return summary
+}
+
+function requireWriteFileJson(file, value) {
+  writeFileSync(file, JSON.stringify(value, null, 2), "utf8")
 }
 
 function extractUsage(usage) {
