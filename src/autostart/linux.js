@@ -6,11 +6,7 @@ export function enableLinuxAutostart(registration) {
   if (hasSystemdUser()) {
     const unit = buildSystemdUnit(registration)
     writeTextFile(registration.linux.systemdFile, unit)
-    removeFileIfExists(registration.linux.legacySystemdFile)
     execFileSync("systemctl", ["--user", "daemon-reload"], { stdio: "ignore" })
-    try {
-      execFileSync("systemctl", ["--user", "disable", "--now", registration.linux.legacySystemdUnit], { stdio: "ignore" })
-    } catch {}
     execFileSync("systemctl", ["--user", "enable", "--now", registration.linux.systemdUnit], { stdio: "ignore" })
     return {
       enabled: true,
@@ -20,7 +16,6 @@ export function enableLinuxAutostart(registration) {
 
   const desktopFile = buildDesktopFile(registration)
   writeTextFile(registration.linux.desktopFile, desktopFile)
-  removeFileIfExists(registration.linux.legacyDesktopFile)
   return {
     enabled: true,
     provider: "linux-xdg-autostart",
@@ -33,17 +28,12 @@ export function disableLinuxAutostart(registration) {
       execFileSync("systemctl", ["--user", "disable", "--now", registration.linux.systemdUnit], { stdio: "ignore" })
     } catch {}
     try {
-      execFileSync("systemctl", ["--user", "disable", "--now", registration.linux.legacySystemdUnit], { stdio: "ignore" })
-    } catch {}
-    try {
       execFileSync("systemctl", ["--user", "daemon-reload"], { stdio: "ignore" })
     } catch {}
     removeFileIfExists(registration.linux.systemdFile)
-    removeFileIfExists(registration.linux.legacySystemdFile)
   }
 
   if (registration) removeFileIfExists(registration.linux.desktopFile)
-  if (registration) removeFileIfExists(registration.linux.legacyDesktopFile)
   return {
     enabled: false,
     provider: hasSystemdUser() ? "linux-systemd-user" : "linux-xdg-autostart",
@@ -68,22 +58,6 @@ export function getLinuxAutostartStatus(registration) {
         details: output.trim(),
       }
     } catch {}
-    try {
-      const output = execFileSync("systemctl", [
-        "--user",
-        "status",
-        registration.linux.legacySystemdUnit,
-        "--no-pager",
-      ], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      })
-      return {
-        enabled: true,
-        provider: "linux-systemd-user",
-        details: output.trim(),
-      }
-    } catch {}
   }
 
   if (existsSync(registration.linux.desktopFile)) {
@@ -91,14 +65,6 @@ export function getLinuxAutostartStatus(registration) {
       enabled: true,
       provider: "linux-xdg-autostart",
       details: readFileSync(registration.linux.desktopFile, "utf8"),
-    }
-  }
-
-  if (existsSync(registration.linux.legacyDesktopFile)) {
-    return {
-      enabled: true,
-      provider: "linux-xdg-autostart",
-      details: readFileSync(registration.linux.legacyDesktopFile, "utf8"),
     }
   }
 

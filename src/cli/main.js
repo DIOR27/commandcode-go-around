@@ -152,6 +152,7 @@ async function setApiKey() {
 
 async function startCommand(args) {
   const background = args.includes("--background")
+  const settings = getRuntimeSettings()
 
   // Refresh catalog before starting (catalog-only, no probes)
   console.log(t("start.refreshing"))
@@ -176,6 +177,16 @@ async function startCommand(args) {
     return
   }
 
+  const probeBeforeStart = await probeLocalShim(settings.host, settings.port, settings.shimAccessToken)
+  if (probeBeforeStart.status === "healthy") {
+    console.log(t("start.already_running_port", settings.host, settings.port))
+    return
+  }
+  if (probeBeforeStart.status === "unauthorized") {
+    console.log(t("start.port_conflict", settings.port))
+    return
+  }
+
   const entry = fileURLToPath(new URL("../../bin/ocg.js", import.meta.url))
   const child = spawn(process.execPath, [entry, "serve"], {
     detached: true,
@@ -183,6 +194,20 @@ async function startCommand(args) {
     windowsHide: true,
   })
   child.unref()
+
+  const started = await waitForShimReady({
+    pid: child.pid,
+    host: settings.host,
+    port: settings.port,
+    token: settings.shimAccessToken,
+  })
+
+  if (!started) {
+    clearPid()
+    console.log(t("start.failed"))
+    return
+  }
+
   writePid(child.pid)
   console.log(t("start.launched", child.pid))
 }
@@ -429,6 +454,38 @@ async function readHealth(host, port) {
   }
 }
 
+async function probeLocalShim(host, port, token) {
+  try {
+    const response = await fetch(`http://${host}:${port}/health`, {
+      headers: getShimHeaders(token),
+    })
+    if (response.ok) {
+      return {
+        status: "healthy",
+        body: await response.json(),
+      }
+    }
+    if (response.status === 401) {
+      return { status: "unauthorized" }
+    }
+    return { status: "other_http", code: response.status }
+  } catch {
+    return { status: "offline" }
+  }
+}
+
+async function waitForShimReady({ pid, host, port, token }) {
+  const deadline = Date.now() + 4000
+  while (Date.now() < deadline) {
+    const probe = await probeLocalShim(host, port, token)
+    if (probe.status === "healthy") return true
+    if (probe.status === "unauthorized") return false
+    if (!isProcessAlive(pid)) return false
+    await sleep(200)
+  }
+  return false
+}
+
 function isProcessAlive(pid) {
   try {
     process.kill(pid, 0)
@@ -442,4 +499,8 @@ function getShimHeaders(token) {
   return {
     "x-ocg-token": token,
   }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }

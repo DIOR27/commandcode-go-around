@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_DIR = resolve(__dirname, "..", "..")
 const DATA_DIR_NAME = "ocg"
-const LEGACY_DATA_DIR_NAME = "opencg-cli"
 
 export function getProjectDir() {
   return PROJECT_DIR
@@ -28,27 +27,17 @@ export function getShimDataDir() {
   return join(getAppDataRoot(), DATA_DIR_NAME)
 }
 
-export function getLegacyShimDataDir() {
-  return join(getAppDataRoot(), LEGACY_DATA_DIR_NAME)
-}
-
 export function getPaths() {
   const dataDir = getShimDataDir()
-  const legacyDataDir = getLegacyShimDataDir()
   return {
     projectDir: PROJECT_DIR,
     dataDir,
-    legacyDataDir,
     configFile: join(dataDir, "config.json"),
-    legacyConfigFile: join(legacyDataDir, "config.json"),
     secretsFile: join(dataDir, "secrets.json"),
-    legacySecretsFile: join(legacyDataDir, "secrets.json"),
     pidFile: join(dataDir, "shim.pid"),
-    legacyPidFile: join(legacyDataDir, "shim.pid"),
     logDir: join(dataDir, "logs"),
     logFile: join(dataDir, "logs", "shim.log"),
     compatibilityFile: join(dataDir, "compatibility.json"),
-    legacyCompatibilityDataFile: join(legacyDataDir, "compatibility.json"),
     legacyCompatibilityFile: join(PROJECT_DIR, "compatibility.json"),
     legacyEnvFile: join(PROJECT_DIR, ".env.local"),
     opencodeConfigFile: getOpenCodeConfigPath(),

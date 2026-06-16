@@ -81,8 +81,6 @@ Base URL:
 
 The shim writes an internal header so that OpenCode is the only valid client of the local provider.
 
-Legacy installations under `opencg-cli` are migrated lazily on first read.
-
 ## Autostart
 
 Register the shim to launch automatically in your user session:

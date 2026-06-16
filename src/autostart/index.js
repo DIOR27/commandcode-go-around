@@ -13,10 +13,6 @@ const TASK_NAME = "OCG CommandCode"
 const MACOS_PLIST_LABEL = "ai.ocg.commandcode"
 const LINUX_SYSTEMD_UNIT = "ocg.service"
 const LINUX_DESKTOP_FILE = "ocg.desktop"
-const LEGACY_APP_LABEL = "opencg-cli"
-const LEGACY_MACOS_PLIST_LABEL = "ai.opencg.cli"
-const LEGACY_LINUX_SYSTEMD_UNIT = "opencg-cli.service"
-const LEGACY_LINUX_DESKTOP_FILE = "opencg-cli.desktop"
 
 export async function enableAutostart() {
   const registration = resolveRegistration()
@@ -77,7 +73,6 @@ export function resolveRegistration() {
   const launcher = resolveLauncher()
   return {
     appLabel: APP_LABEL,
-    legacyAppLabel: LEGACY_APP_LABEL,
     command: launcher.command,
     commandArgs: launcher.argv,
     taskExecute: launcher.taskExecute || null,
@@ -93,29 +88,15 @@ export function resolveRegistration() {
         "Startup",
         `${APP_LABEL}.cmd`,
       ),
-      legacyStartupFile: join(
-        process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
-        "Microsoft",
-        "Windows",
-        "Start Menu",
-        "Programs",
-        "Startup",
-        `${LEGACY_APP_LABEL}.cmd`,
-      ),
     },
     macos: {
       label: MACOS_PLIST_LABEL,
       plistFile: join(homedir(), "Library", "LaunchAgents", `${MACOS_PLIST_LABEL}.plist`),
-      legacyLabel: LEGACY_MACOS_PLIST_LABEL,
-      legacyPlistFile: join(homedir(), "Library", "LaunchAgents", `${LEGACY_MACOS_PLIST_LABEL}.plist`),
     },
     linux: {
       systemdUnit: LINUX_SYSTEMD_UNIT,
       systemdFile: join(homedir(), ".config", "systemd", "user", LINUX_SYSTEMD_UNIT),
       desktopFile: join(resolveXdgConfigHome(), "autostart", LINUX_DESKTOP_FILE),
-      legacySystemdUnit: LEGACY_LINUX_SYSTEMD_UNIT,
-      legacySystemdFile: join(homedir(), ".config", "systemd", "user", LEGACY_LINUX_SYSTEMD_UNIT),
-      legacyDesktopFile: join(resolveXdgConfigHome(), "autostart", LEGACY_LINUX_DESKTOP_FILE),
     },
   }
 }

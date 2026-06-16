@@ -8,10 +8,6 @@ export function enableMacAutostart(registration) {
   try {
     execFileSync("launchctl", ["unload", registration.macos.plistFile], { stdio: "ignore" })
   } catch {}
-  try {
-    execFileSync("launchctl", ["unload", registration.macos.legacyPlistFile], { stdio: "ignore" })
-  } catch {}
-  removeFileIfExists(registration.macos.legacyPlistFile)
   execFileSync("launchctl", ["load", "-w", registration.macos.plistFile], { stdio: "ignore" })
   return {
     enabled: true,
@@ -23,11 +19,7 @@ export function disableMacAutostart(registration) {
   try {
     execFileSync("launchctl", ["unload", "-w", registration.macos.plistFile], { stdio: "ignore" })
   } catch {}
-  try {
-    execFileSync("launchctl", ["unload", "-w", registration.macos.legacyPlistFile], { stdio: "ignore" })
-  } catch {}
   removeFileIfExists(registration.macos.plistFile)
-  removeFileIfExists(registration.macos.legacyPlistFile)
   return {
     enabled: false,
     provider: "macos-launchagent",
@@ -35,12 +27,7 @@ export function disableMacAutostart(registration) {
 }
 
 export function getMacAutostartStatus(registration) {
-  const activeFile = existsSync(registration.macos.plistFile)
-    ? registration.macos.plistFile
-    : existsSync(registration.macos.legacyPlistFile)
-      ? registration.macos.legacyPlistFile
-      : null
-  if (!activeFile) {
+  if (!existsSync(registration.macos.plistFile)) {
     return {
       enabled: false,
       provider: "macos-launchagent",
@@ -50,7 +37,7 @@ export function getMacAutostartStatus(registration) {
   return {
     enabled: true,
     provider: "macos-launchagent",
-    details: readFileSync(activeFile, "utf8"),
+    details: readFileSync(registration.macos.plistFile, "utf8"),
   }
 }
 

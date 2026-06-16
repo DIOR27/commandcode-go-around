@@ -20,7 +20,10 @@ const messages = {
     "start.updated": "Catalog updated.",
     "start.warning": "Warning: could not update catalog, starting anyway.",
     "start.already_running": "OpenCommandGo already running with PID {0}.",
+    "start.already_running_port": "OpenCommandGo already running on http://{0}:{1}.",
     "start.launched": "OpenCommandGo launched in background with PID {0}.",
+    "start.port_conflict": "Port {0} is already occupied by another process or a stale shim with a different token. Stop it first and try again.",
+    "start.failed": "OpenCommandGo could not start in background. Check if the port is free and try again.",
 
     // -- Server --
     "server.listening": "OCG listening on http://{0}:{1}",
@@ -154,7 +157,10 @@ Commands:
     "start.updated": "Catálogo actualizado.",
     "start.warning": "Advertencia: no se pudo actualizar el catálogo, iniciando de todos modos.",
     "start.already_running": "OpenCommandGo ya está corriendo con PID {0}.",
+    "start.already_running_port": "OpenCommandGo ya está corriendo en http://{0}:{1}.",
     "start.launched": "OpenCommandGo lanzado en background con PID {0}.",
+    "start.port_conflict": "El puerto {0} ya está ocupado por otro proceso o por un shim viejo con token distinto. Primero detenelo y volvé a intentar.",
+    "start.failed": "OpenCommandGo no pudo iniciar en background. Revisá si el puerto está libre y volvé a intentar.",
 
     // -- Server --
     "server.listening": "OCG escuchando en http://{0}:{1}",
