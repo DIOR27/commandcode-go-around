@@ -11,6 +11,7 @@ import { MODELS, MODEL_SET } from "../shared/models.js"
 import { deriveCatalogFromCompatibility, extractModelRows, fallbackCatalog, normalizeCatalogRows } from "../shared/catalog.js"
 import { normalizeCommandCodeReasoningEffort } from "../shared/commandcode-thinking.js"
 import { resolveContextWindow } from "../shared/context-windows.js"
+import { t } from "../shared/i18n.js"
 
 const IMAGE_TEST_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/320px-Cat03.jpg"
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024
@@ -39,7 +40,7 @@ export async function startServer() {
 
   const settings = getRuntimeSettings()
   if (!settings.allowRemoteHost && !isLoopbackHost(settings.host)) {
-    throw new Error(`Host no permitido para uso local: ${settings.host}. Usá 127.0.0.1 o localhost.`)
+    throw new Error(t("error.host_not_allowed", settings.host))
   }
   const paths = getPaths()
   ensureDir(paths.logDir)
@@ -89,7 +90,7 @@ export async function startServer() {
       if (req.method === "POST" && url.pathname === "/v1/chat/completions") {
         if (!requireShimAuth(req, res, settings)) return
         if (!settings.commandCodeApiKey) {
-          return json(res, 500, openAIError("missing_api_key", `Falta API key. Corré: ocg setup o ocg set-api-key`))
+          return json(res, 500, openAIError("missing_api_key", t("error.missing_api_key")))
         }
 
         const body = await readJson(req)
@@ -137,7 +138,7 @@ export async function startServer() {
   })
 
   log(`LISTEN http://${settings.host}:${settings.port}`)
-  console.log(`opencg-cli listening on http://${settings.host}:${settings.port}`)
+  console.log(t("server.listening", settings.host, settings.port))
   scheduleCompatibilityRefresh(refreshMs, settings)
   return server
 }
@@ -154,7 +155,7 @@ async function callCommandCodeAlpha(body, model, settings, options = {}) {
   const raw = await response.text()
   if (!response.ok) {
     log(`UPSTREAM ${response.status} ${raw}`)
-    throw new Error(`Command Code respondió ${response.status}: ${raw.slice(0, 500)}`)
+    throw new Error(t("error.upstream", response.status, raw.slice(0, 500)))
   }
 
   const events = parseEventLines(raw)
@@ -184,10 +185,10 @@ async function startCommandCodeAlphaStream(body, model, settings) {
   if (!response.ok) {
     const raw = await response.text()
     log(`UPSTREAM ${response.status} ${raw}`)
-    throw new Error(`Command Code respondió ${response.status}: ${raw.slice(0, 500)}`)
+    throw new Error(t("error.upstream", response.status, raw.slice(0, 500)))
   }
   if (!response.body) {
-    throw new Error("Command Code no devolvió body de streaming")
+    throw new Error(t("error.upstream_no_body"))
   }
 
   return {
@@ -593,7 +594,7 @@ async function streamOpenAIResponse(res, model, upstream) {
       const type = String(event.type || event.event || "").toLowerCase()
 
       if (type === "error") {
-        throw new Error(`Command Code stream error: ${jsonString(event.error ?? event.message ?? event)}`)
+        throw new Error(t("error.upstream_stream", jsonString(event.error ?? event.message ?? event)))
       }
 
       if (type === "text-delta" || type === "text_delta" || type === "output_text_delta") {
@@ -1029,7 +1030,7 @@ async function fetchAvailableCatalog(settings) {
       },
       signal: AbortSignal.timeout(8000),
     })
-    if (!response.ok) throw new Error(`models ${response.status}`)
+    if (!response.ok) throw new Error(t("error.upstream_models", response.status))
     const data = await response.json()
     const rows = normalizeCatalogRows(extractModelRows(data))
     if (rows.length > 0) return rows

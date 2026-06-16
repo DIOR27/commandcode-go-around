@@ -6,6 +6,7 @@ import { readConfig, writeConfig } from "../config/store.js"
 import { disableLinuxAutostart, enableLinuxAutostart, getLinuxAutostartStatus } from "./linux.js"
 import { disableMacAutostart, enableMacAutostart, getMacAutostartStatus } from "./macos.js"
 import { disableWindowsAutostart, enableWindowsAutostart, getWindowsAutostartStatus } from "./windows.js"
+import { t } from "../shared/i18n.js"
 
 const APP_LABEL = "opencg-cli"
 const TASK_NAME = "OpenCG CLI"
@@ -117,7 +118,7 @@ function resolveLauncher() {
   const chosen = chooseBestLauncher(candidates)
   if (chosen) return chosen
 
-  throw new Error("No pude resolver el ejecutable del CLI para registrar autostart.")
+  throw new Error(t("autostart.no_resolve"))
 }
 
 function chooseBestLauncher(candidates) {

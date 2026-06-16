@@ -8,6 +8,7 @@ import { clearPid, getRuntimeSettings, readCompatibilityMatrix, readConfig, read
 import { getPaths } from "../config/paths.js"
 import { detectOpenCodeInstallations, inspectOpenCodeProvider, removeOpenCodeProvider, syncOpenCodeConfig } from "../opencode/config.js"
 import { refreshModelCatalogNow, startServer } from "../runtime/server.js"
+import { t } from "../shared/i18n.js"
 
 export async function runCli(args) {
   const [command = "help", ...rest] = args
@@ -65,22 +66,22 @@ async function runSetup() {
   const detected = detectOpenCodeInstallations()
 
   try {
-    console.log("Configurando Command Code Shim.\n")
-    console.log(`OpenCode config: ${detected.configFound ? "detectada" : "no detectada"} -> ${detected.configFile}`)
-    console.log(`OpenCode Desktop: ${detected.desktop || "no detectado"}`)
-    console.log(`OpenCode CLI: ${detected.cli || "no detectado"}`)
+    console.log(t("setup.title"))
+    console.log(t("setup.opencode.config", detected.configFound ? t("status.yes") : t("status.no"), detected.configFile))
+    console.log(t("setup.opencode.desktop", detected.desktop || t("misc.no")))
+    console.log(t("setup.opencode.cli", detected.cli || t("misc.no")))
     console.log("")
 
     const apiKey = await askRequired(
       rl,
-      `API key de Command Code${currentSecrets.commandCodeApiKey ? " (Enter para conservar la actual)" : ""}: `,
+      t("setup.api_key.prompt", currentSecrets.commandCodeApiKey ? t("misc.enter_keep") : ""),
       currentSecrets.commandCodeApiKey || "",
     )
 
-    const portInput = await rl.question(`Puerto del shim [${currentConfig.port}]: `)
+    const portInput = await rl.question(t("setup.port.prompt", currentConfig.port))
     const port = normalizePort(portInput, currentConfig.port)
 
-    const autostartAnswer = await rl.question("¿Querés habilitar inicio automático del shim al iniciar sesión? [Y/n]: ")
+    const autostartAnswer = await rl.question(t("setup.autostart.prompt"))
     const autostartEnabled = normalizeYesNo(autostartAnswer, true)
 
     const nextConfig = {
@@ -106,9 +107,9 @@ async function runSetup() {
         compatibilityMatrix: readCompatibilityMatrix(),
         createIfMissing: false,
       })
-      if (target) console.log(`OpenCode quedó configurado en: ${target}`)
+      if (target) console.log(t("setup.synced", target))
     } else {
-      console.log("OpenCode no está detectado todavía. Guardé la config del shim igual.")
+      console.log(t("setup.not_detected"))
     }
 
     if (autostartEnabled) {
@@ -120,11 +121,11 @@ async function runSetup() {
         enabled: false,
       }
       writeConfig(refreshed)
-      console.log("Inicio automático deshabilitado.")
+      console.log(t("setup.autostart.disabled"))
     }
 
-    console.log(`Config guardada en: ${getPaths().configFile}`)
-    console.log(`Secretos guardados en: ${getPaths().secretsFile}`)
+    console.log(t("setup.config_saved", getPaths().configFile))
+    console.log(t("setup.secrets_saved", getPaths().secretsFile))
   } finally {
     rl.close()
   }
@@ -136,14 +137,14 @@ async function setApiKey() {
     const currentSecrets = readSecrets()
     const apiKey = await askRequired(
       rl,
-      `Nueva API key de Command Code${currentSecrets.commandCodeApiKey ? " (Enter para conservar la actual)" : ""}: `,
+      t("setapikey.prompt", currentSecrets.commandCodeApiKey ? t("misc.enter_keep") : ""),
       currentSecrets.commandCodeApiKey || "",
     )
     writeSecrets({
       ...currentSecrets,
       commandCodeApiKey: apiKey,
     })
-    console.log(`API key actualizada en: ${getPaths().secretsFile}`)
+    console.log(t("setapikey.saved", getPaths().secretsFile))
   } finally {
     rl.close()
   }
@@ -153,15 +154,15 @@ async function startCommand(args) {
   const background = args.includes("--background")
 
   // Refresh catalog before starting (catalog-only, no probes)
-  console.log("Refrescando catálogo de modelos...")
+  console.log(t("start.refreshing"))
   try {
     await refreshModelCatalogNow({
       probeMode: "catalog",
       verifyAvailability: false,
     })
-    console.log("Catálogo actualizado.")
+    console.log(t("start.updated"))
   } catch (error) {
-    console.log("Advertencia: no se pudo actualizar el catálogo, iniciando de todos modos.")
+    console.log(t("start.warning"))
   }
 
   if (!background) {
@@ -171,7 +172,7 @@ async function startCommand(args) {
 
   const pid = readPid()
   if (pid && isProcessAlive(pid)) {
-    console.log(`Shim ya está corriendo con PID ${pid}.`)
+    console.log(t("start.already_running", pid))
     return
   }
 
@@ -183,7 +184,7 @@ async function startCommand(args) {
   })
   child.unref()
   writePid(child.pid)
-  console.log(`Shim lanzado en background con PID ${child.pid}.`)
+  console.log(t("start.launched", child.pid))
 }
 
 async function statusCommand() {
@@ -194,17 +195,17 @@ async function statusCommand() {
   const autostart = await getAutostartStatus()
   const compatibility = readCompatibilityMatrix()
   const modelCount = Object.values(compatibility.models || {}).filter(model => model?.status !== "broken").length
-  console.log(`Shim: ${health ? "activo" : "inactivo"} (${settings.host}:${settings.port})`)
-  if (health) console.log(`Provider: ${health.provider}`)
-  console.log(`Config: ${getPaths().configFile}`)
-  console.log(`Secretos: ${getPaths().secretsFile}`)
-  console.log(`OpenCode config: ${detected.configFile}`)
-  console.log(`Provider registrado: ${inspectOpenCodeProvider(config.providerId) ? "sí" : "no"}`)
-  console.log(`Desktop detectado: ${detected.desktop || "no"}`)
-  console.log(`CLI detectado: ${detected.cli || "no"}`)
-  console.log(`Autostart habilitado: ${autostart.enabled ? "sí" : "no"}`)
-  console.log(`Autostart proveedor: ${autostart.provider || "no"}`)
-  console.log(`Modelos útiles en catálogo: ${modelCount}`)
+  console.log(t("status.shim", health ? t("status.active") : t("status.inactive"), settings.host, settings.port))
+  if (health) console.log(t("status.provider", health.provider))
+  console.log(t("status.config", getPaths().configFile))
+  console.log(t("status.secrets", getPaths().secretsFile))
+  console.log(t("status.opencode_config", detected.configFile))
+  console.log(t("status.provider_registered", inspectOpenCodeProvider(config.providerId) ? t("status.yes") : t("status.no")))
+  console.log(t("status.desktop_detected", detected.desktop || t("status.no")))
+  console.log(t("status.cli_detected", detected.cli || t("status.no")))
+  console.log(t("status.autostart_enabled", autostart.enabled ? t("status.yes") : t("status.no")))
+  console.log(t("status.autostart_provider", autostart.provider || t("status.no")))
+  console.log(t("status.models_count", modelCount))
 }
 
 async function doctorCommand() {
@@ -217,21 +218,21 @@ async function doctorCommand() {
   const compatibility = readCompatibilityMatrix()
   const modelCount = Object.values(compatibility.models || {}).filter(model => model?.status !== "broken").length
 
-  console.log(`API key: ${settings.commandCodeApiKey ? "ok" : "faltante"}`)
-  console.log(`Shim health: ${health ? "ok" : "caído"}`)
-  console.log(`OpenCode config detectada: ${detected.configFound ? "sí" : "no"}`)
-  console.log(`Provider cmdshim configurado: ${provider ? "sí" : "no"}`)
-  console.log(`Desktop detectado: ${detected.desktop ? "sí" : "no"}`)
-  console.log(`CLI detectado: ${detected.cli ? "sí" : "no"}`)
-  console.log(`Compat matrix: ${getPaths().compatibilityFile}`)
-  console.log(`Autostart configurado: ${autostart.enabled ? "sí" : "no"}`)
-  console.log(`Autostart proveedor: ${autostart.provider || "no"}`)
-  console.log(`Modelos útiles en catálogo: ${modelCount}`)
+  console.log(t("doctor.api_key", settings.commandCodeApiKey ? t("doctor.ok") : t("doctor.missing")))
+  console.log(t("doctor.shim_health", health ? t("doctor.up") : t("doctor.down")))
+  console.log(t("doctor.opencode_config", detected.configFound ? t("status.yes") : t("status.no")))
+  console.log(t("doctor.provider", provider ? t("status.yes") : t("status.no")))
+  console.log(t("doctor.desktop", detected.desktop ? t("status.yes") : t("status.no")))
+  console.log(t("doctor.cli", detected.cli ? t("status.yes") : t("status.no")))
+  console.log(t("doctor.compat_matrix", getPaths().compatibilityFile))
+  console.log(t("doctor.autostart", autostart.enabled ? t("status.yes") : t("status.no")))
+  console.log(t("doctor.autostart_provider", autostart.provider || t("misc.unknown")))
+  console.log(t("doctor.models", modelCount))
 }
 
 async function refreshModelsCommand(args = []) {
   const options = parseRefreshModelsArgs(args)
-  console.log("Refrescando catálogo y compatibilidad de modelos...")
+  console.log(t("refresh.start"))
   const shouldProbe = await resolveRefreshProbeConsent(options)
   const matrix = await refreshModelCatalogNow({
     probeMode: shouldProbe ? (options.full ? "full" : "fast") : "catalog",
@@ -239,22 +240,22 @@ async function refreshModelsCommand(args = []) {
     concurrency: options.concurrency,
     onProgress(event) {
       if (event.type === "catalog") {
-        console.log(`Catálogo: ${event.message}`)
+        console.log(t("refresh.catalog", event.message))
         return
       }
       if (event.type === "model-start") {
-        console.log(`[${event.index}/${event.total}] ${event.model}...`)
+        console.log(t("refresh.model_start", event.index, event.total, event.model))
         return
       }
       if (event.type === "model-done") {
-        console.log(`  -> ${event.status}`)
+        console.log(t("refresh.model_done", event.status))
       }
     },
   })
   const useful = Object.entries(matrix.models || {})
     .filter(([, info]) => info?.status !== "broken")
     .map(([id]) => id)
-  console.log(`Refresh completo. Modelos útiles: ${useful.length}`)
+  console.log(t("refresh.complete", useful.length))
 }
 
 function parseRefreshModelsArgs(args) {
@@ -312,8 +313,8 @@ async function resolveRefreshProbeConsent(options) {
 
   const rl = createInterface({ input: stdin, output: stdout })
   try {
-    console.log("Advertencia: verificar disponibilidad real consumirá tokens/créditos en Command Code.")
-    const answer = await rl.question("¿Querés continuar con los probes? [y/N]: ")
+    console.log(t("refresh.probe_warning"))
+    const answer = await rl.question(t("refresh.probe_confirm"))
     return normalizeYesNo(answer, false)
   } finally {
     rl.close()
@@ -323,17 +324,17 @@ async function resolveRefreshProbeConsent(options) {
 async function stopCommand() {
   const pid = readPid()
   if (!pid) {
-    console.log("No hay PID guardado.")
+    console.log(t("stop.no_pid"))
     return
   }
   if (!isProcessAlive(pid)) {
     clearPid()
-    console.log("El proceso ya no existía; limpié el PID.")
+    console.log(t("stop.already_gone"))
     return
   }
   process.kill(pid)
   clearPid()
-  console.log(`Shim detenido (PID ${pid}).`)
+  console.log(t("stop.stopped", pid))
 }
 
 async function autostartCommand(args) {
@@ -349,30 +350,30 @@ async function autostartCommand(args) {
       await autostartStatusCommand()
       return
     default:
-      console.log("Uso: ocg autostart <enable|disable|status>")
+      console.log(t("autostart.usage"))
   }
 }
 
 async function enableAutostartCommand(options = {}) {
   const result = await enableAutostart()
-  if (!options.silentPrefix) console.log("Inicio automático habilitado.")
-  console.log(`Proveedor: ${result.provider}`)
-  console.log("Comando: ocg start --background")
+  if (!options.silentPrefix) console.log(t("autostart.enabled"))
+  console.log(t("autostart.provider", result.provider))
+  console.log(t("autostart.command"))
 }
 
 async function disableAutostartCommand() {
   const result = await disableAutostart()
-  console.log("Inicio automático deshabilitado.")
-  console.log(`Proveedor: ${result.provider}`)
+  console.log(t("autostart.disabled"))
+  console.log(t("autostart.provider", result.provider))
 }
 
 async function autostartStatusCommand() {
   const status = await getAutostartStatus()
-  console.log(`Autostart: ${status.enabled ? "habilitado" : "deshabilitado"}`)
-  console.log(`Proveedor: ${status.provider || "desconocido"}`)
-  console.log(`Modo: ${status.mode}`)
-  console.log(`Comando: ${status.command}`)
-  console.log(`Config sincronizada: ${status.matchesConfig ? "sí" : "no"}`)
+  console.log(t("autostart.status", status.enabled ? t("autostart.enabled_label") : t("autostart.disabled_label")))
+  console.log(t("autostart.status_provider", status.provider || t("misc.unknown")))
+  console.log(t("autostart.mode", status.mode))
+  console.log(t("autostart.command_line", status.command))
+  console.log(t(status.matchesConfig ? "autostart.sync_yes" : "autostart.sync_no"))
 }
 
 async function uninstallCommand() {
@@ -385,28 +386,13 @@ async function uninstallCommand() {
     rmSync(dataDir, { recursive: true, force: true })
   }
   clearPid()
-  console.log(`Provider en OpenCode: ${removedProvider ? "removido" : "no estaba configurado"}`)
-  console.log(`Datos locales borrados: ${dataDir}`)
-  console.log("Desinstalación completa del shim terminada.")
+  console.log(t(removedProvider ? "uninstall.provider_removed" : "uninstall.provider_not_found"))
+  console.log(t("uninstall.data_deleted", dataDir))
+  console.log(t("uninstall.done"))
 }
 
 function printHelp() {
-  console.log(`ocg
-
-Comandos:
-  setup
-  start [--background]
-  serve
-  stop
-  enable-autostart
-  disable-autostart
-  autostart-status
-  autostart <enable|disable|status>
-  status
-  doctor
-  refresh-models [--probe|--full] [--parallel N] [--yes]
-  set-api-key
-  uninstall`)
+  console.log(t("help.text"))
 }
 
 async function askRequired(rl, label, fallback = "") {
@@ -414,7 +400,7 @@ async function askRequired(rl, label, fallback = "") {
     const value = (await rl.question(label)).trim()
     if (value) return value
     if (fallback) return fallback
-    console.log("Ese valor es obligatorio.")
+    console.log(t("error.required"))
   }
 }
 
