@@ -8,7 +8,7 @@ import { clearPid, clearWatchdogPid, getRuntimeSettings, readCompatibilityMatrix
 import { getPaths } from "../config/paths.js"
 import { detectOpenCodeInstallations, inspectOpenCodeProvider, removeOpenCodeProvider, syncOpenCodeConfig } from "../opencode/config.js"
 import { refreshModelCatalogNow, startServer } from "../runtime/server.js"
-import { t } from "../shared/i18n.js"
+import { getLocale, t } from "../shared/i18n.js"
 import { findPidByPort, gracefulKill, isProcessAlive, sleep } from "../shared/process-utils.js"
 
 export async function runCli(args) {
@@ -261,6 +261,7 @@ async function doctorCommand() {
   console.log(t("doctor.desktop", detected.desktop ? t("status.yes") : t("status.no")))
   console.log(t("doctor.cli", detected.cli ? t("status.yes") : t("status.no")))
   console.log(t("doctor.compat_matrix", getPaths().compatibilityFile))
+  console.log(t("doctor.catalog_age", formatCatalogAge(compatibility.updated_at)))
   console.log(t("doctor.autostart", autostart.enabled ? t("status.yes") : t("status.no")))
   console.log(t("doctor.autostart_provider", autostart.provider || t("misc.unknown")))
   console.log(t("doctor.models", modelCount))
@@ -740,6 +741,24 @@ async function killWatchdog() {
     }
   }
   clearWatchdogPid()
+}
+
+function formatCatalogAge(updatedAt) {
+  if (!updatedAt) return t("misc.unknown")
+  const ageMs = Date.now() - new Date(updatedAt).getTime()
+  if (ageMs < 0) return t("misc.unknown")
+
+  const es = getLocale() === "es"
+  const hours = Math.floor(ageMs / 3600000)
+  const minutes = Math.floor((ageMs % 3600000) / 60000)
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24)
+    return es ? `hace ${days}d` : `${days}d ago`
+  }
+  if (hours >= 1) return es ? `hace ${hours}h ${minutes}m` : `${hours}h ${minutes}m ago`
+  if (minutes >= 1) return es ? `hace ${minutes}m` : `${minutes}m ago`
+  return es ? "<1m" : "<1m ago"
 }
 
 function getShimHeaders(token) {
