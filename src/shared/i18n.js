@@ -23,7 +23,7 @@ const messages = {
     "start.launched": "OpenCommandGo launched in background with PID {0}.",
 
     // -- Server --
-    "server.listening": "opencg-cli listening on http://{0}:{1}",
+    "server.listening": "OCG listening on http://{0}:{1}",
 
     // -- Stop --
     "stop.no_pid": "No PID saved.",
@@ -55,7 +55,7 @@ const messages = {
     "doctor.up": "up",
     "doctor.down": "down",
     "doctor.opencode_config": "OpenCode config detected: {0}",
-    "doctor.provider": "Provider opencg-cli configured: {0}",
+    "doctor.provider": "Provider OCG CommandCode configured: {0}",
     "doctor.desktop": "Desktop detected: {0}",
     "doctor.cli": "CLI detected: {0}",
     "doctor.compat_matrix": "Compat matrix: {0}",
@@ -157,7 +157,7 @@ Commands:
     "start.launched": "OpenCommandGo lanzado en background con PID {0}.",
 
     // -- Server --
-    "server.listening": "opencg-cli escuchando en http://{0}:{1}",
+    "server.listening": "OCG escuchando en http://{0}:{1}",
 
     // -- Stop --
     "stop.no_pid": "No hay PID guardado.",
@@ -189,7 +189,7 @@ Commands:
     "doctor.up": "ok",
     "doctor.down": "caído",
     "doctor.opencode_config": "OpenCode config detectada: {0}",
-    "doctor.provider": "Provider opencg-cli configurado: {0}",
+    "doctor.provider": "Provider OCG CommandCode configurado: {0}",
     "doctor.desktop": "Desktop detectado: {0}",
     "doctor.cli": "CLI detectado: {0}",
     "doctor.compat_matrix": "Compat matrix: {0}",

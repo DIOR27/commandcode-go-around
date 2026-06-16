@@ -66,7 +66,7 @@ export async function startServer() {
         if (!requireShimAuth(req, res, settings)) return
         return json(res, 200, {
           ok: true,
-          provider: "opencg-cli",
+          provider: "ocg",
           host: settings.host,
           port: settings.port,
           models: availableCatalog.map(({ id, name }) => ({ id, name })),
@@ -235,7 +235,7 @@ function fetchCommandCodeAlpha(payload, sessionId, settings, options = {}) {
       "x-cli-environment": "production",
       "x-command-code-version": settings.commandCodeVersion,
       "x-co-flag": "false",
-      "x-project-slug": "opencode-opencg-cli",
+      "x-project-slug": "opencode-ocg",
       "x-session-id": sessionId,
       "x-taste-learning": "false",
     },
@@ -551,7 +551,7 @@ function buildOpenAICompletion(model, upstream) {
     ],
     usage,
     _meta: {
-      shim: "opencg-cli",
+      shim: "ocg",
       duration_ms: upstream.durationMs,
       session_id: upstream.sessionId,
     },
@@ -1458,7 +1458,7 @@ function buildModelDescriptor(model, compat) {
     id: model.id,
     object: "model",
     created: 0,
-    owned_by: "opencg-cli",
+    owned_by: "ocg",
     name: model.name,
     context_length: contextWindow,
     limit: {

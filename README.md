@@ -53,17 +53,17 @@ ocg uninstall
 
 ### Windows
 
-- `%APPDATA%\opencg-cli\config.json`
-- `%APPDATA%\opencg-cli\secrets.json`
-- `%APPDATA%\opencg-cli\compatibility.json`
+- `%APPDATA%\ocg\config.json`
+- `%APPDATA%\ocg\secrets.json`
+- `%APPDATA%\ocg\compatibility.json`
 
 ### macOS
 
-- `~/Library/Application Support/opencg-cli/`
+- `~/Library/Application Support/ocg/`
 
 ### Linux
 
-- `${XDG_CONFIG_HOME:-~/.config}/opencg-cli/`
+- `${XDG_CONFIG_HOME:-~/.config}/ocg/`
 
 ## OpenCode
 
@@ -71,15 +71,17 @@ The setup/sync updates:
 
 - `~/.config/opencode/opencode.json`
 
-Provider:
+Provider name:
 
-- `opencg-cli`
+- `OCG CommandCode`
 
 Base URL:
 
 - `http://127.0.0.1:4310/v1`
 
 The shim writes an internal header so that OpenCode is the only valid client of the local provider.
+
+Legacy installations under `opencg-cli` are migrated lazily on first read.
 
 ## Autostart
 

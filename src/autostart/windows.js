@@ -6,6 +6,7 @@ export function enableWindowsAutostart(registration) {
 ${registration.command}
 `
   writeTextFile(registration.windows.startupFile, script)
+  removeFileIfExists(registration.windows.legacyStartupFile)
   return {
     enabled: true,
     provider: "windows-startup-folder",
@@ -14,6 +15,7 @@ ${registration.command}
 
 export function disableWindowsAutostart(registration) {
   removeFileIfExists(registration.windows.startupFile)
+  removeFileIfExists(registration.windows.legacyStartupFile)
   return {
     enabled: false,
     provider: "windows-startup-folder",
@@ -21,7 +23,12 @@ export function disableWindowsAutostart(registration) {
 }
 
 export function getWindowsAutostartStatus(registration) {
-  if (!existsSync(registration.windows.startupFile)) {
+  const activeFile = existsSync(registration.windows.startupFile)
+    ? registration.windows.startupFile
+    : existsSync(registration.windows.legacyStartupFile)
+      ? registration.windows.legacyStartupFile
+      : null
+  if (!activeFile) {
     return {
       enabled: false,
       provider: "windows-startup-folder",
@@ -32,6 +39,6 @@ export function getWindowsAutostartStatus(registration) {
   return {
     enabled: true,
     provider: "windows-startup-folder",
-    details: readFileSync(registration.windows.startupFile, "utf8"),
+    details: readFileSync(activeFile, "utf8"),
   }
 }

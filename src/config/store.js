@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs"
+import { copyFileSync, existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs"
 import { randomBytes } from "node:crypto"
 import { getPaths, ensureDir, ensureParentDir } from "./paths.js"
 
@@ -24,7 +24,7 @@ const DEFAULT_CONFIG = {
 
 export function readConfig() {
   const paths = getPaths()
-  const fileConfig = readJsonIfExists(paths.configFile)
+  const fileConfig = readJsonWithLegacy(paths.configFile, paths.legacyConfigFile)
   const merged = mergeDeep(structuredClone(DEFAULT_CONFIG), fileConfig || {})
   merged.detectedOpenCode = {
     ...DEFAULT_CONFIG.detectedOpenCode,
@@ -46,7 +46,7 @@ export function writeConfig(nextConfig) {
 
 export function readSecrets() {
   const paths = getPaths()
-  const secrets = readJsonIfExists(paths.secretsFile) || {}
+  const secrets = readJsonWithLegacy(paths.secretsFile, paths.legacySecretsFile) || {}
   if (!secrets.shimAccessToken) {
     secrets.shimAccessToken = randomBytes(32).toString("hex")
     ensureDir(paths.dataDir)
@@ -107,7 +107,7 @@ export function getRuntimeSettings() {
 
 export function readCompatibilityMatrix() {
   const paths = getPaths()
-  const current = readJsonIfExists(paths.compatibilityFile)
+  const current = readJsonWithLegacy(paths.compatibilityFile, paths.legacyCompatibilityDataFile)
   if (current) return current
   const legacy = readJsonIfExists(paths.legacyCompatibilityFile)
   if (legacy) return legacy
@@ -127,8 +127,17 @@ export function writeCompatibilityMatrix(matrix) {
 
 export function readPid() {
   const paths = getPaths()
-  if (!existsSync(paths.pidFile)) return null
-  const raw = readFileSync(paths.pidFile, "utf8").trim()
+  const target = existsSync(paths.pidFile)
+    ? paths.pidFile
+    : existsSync(paths.legacyPidFile)
+      ? paths.legacyPidFile
+      : null
+  if (!target) return null
+  if (target === paths.legacyPidFile && !existsSync(paths.pidFile)) {
+    ensureDir(paths.dataDir)
+    writeFileSync(paths.pidFile, readFileSync(paths.legacyPidFile, "utf8"), "utf8")
+  }
+  const raw = readFileSync(target, "utf8").trim()
   const pid = Number(raw)
   return Number.isInteger(pid) && pid > 0 ? pid : null
 }
@@ -142,6 +151,7 @@ export function writePid(pid) {
 export function clearPid() {
   const paths = getPaths()
   if (existsSync(paths.pidFile)) unlinkSync(paths.pidFile)
+  if (existsSync(paths.legacyPidFile)) unlinkSync(paths.legacyPidFile)
 }
 
 function readJsonIfExists(file) {
@@ -151,6 +161,21 @@ function readJsonIfExists(file) {
   } catch {
     return null
   }
+}
+
+function readJsonWithLegacy(currentFile, legacyFile) {
+  const current = readJsonIfExists(currentFile)
+  if (current) return current
+
+  const legacy = readJsonIfExists(legacyFile)
+  if (!legacy) return null
+
+  if (!existsSync(currentFile) && existsSync(legacyFile)) {
+    ensureParentDir(currentFile)
+    copyFileSync(legacyFile, currentFile)
+  }
+
+  return legacy
 }
 
 function firstNonEmpty(...values) {
