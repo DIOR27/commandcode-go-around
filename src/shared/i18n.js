@@ -6,7 +6,7 @@ const messages = {
     "setup.opencode.desktop": "OpenCode Desktop: {0}",
     "setup.opencode.cli": "OpenCode CLI: {0}",
     "setup.api_key.prompt": "Command Code API key{0}: ",
-    "setup.port.prompt": "Shim port [{0}]: ",
+    "setup.port.prompt": "OpenCommandGo port [{0}]: ",
     "setup.autostart.prompt": "Enable autostart on login? [Y/n]: ",
     "setup.synced": "OpenCode configured at: {0}",
     "setup.not_detected": "OpenCode not detected yet. Config saved anyway.",
@@ -19,8 +19,8 @@ const messages = {
     "start.refreshing": "Refreshing model catalog...",
     "start.updated": "Catalog updated.",
     "start.warning": "Warning: could not update catalog, starting anyway.",
-    "start.already_running": "Shim already running with PID {0}.",
-    "start.launched": "Shim launched in background with PID {0}.",
+    "start.already_running": "OpenCommandGo already running with PID {0}.",
+    "start.launched": "OpenCommandGo launched in background with PID {0}.",
 
     // -- Server --
     "server.listening": "opencg-cli listening on http://{0}:{1}",
@@ -28,7 +28,7 @@ const messages = {
     // -- Stop --
     "stop.no_pid": "No PID saved.",
     "stop.already_gone": "Process no longer existed; cleaned PID.",
-    "stop.stopped": "Shim stopped (PID {0}).",
+    "stop.stopped": "OpenCommandGo stopped (PID {0}).",
 
     // -- Status --
     "status.shim": "Shim: {0} ({1}:{2})",
@@ -51,7 +51,7 @@ const messages = {
     "doctor.api_key": "API key: {0}",
     "doctor.ok": "ok",
     "doctor.missing": "missing",
-    "doctor.shim_health": "Shim health: {0}",
+    "doctor.shim_health": "OpenCommandGo health: {0}",
     "doctor.up": "up",
     "doctor.down": "down",
     "doctor.opencode_config": "OpenCode config detected: {0}",
@@ -140,10 +140,10 @@ Commands:
     "setup.opencode.desktop": "OpenCode Desktop: {0}",
     "setup.opencode.cli": "OpenCode CLI: {0}",
     "setup.api_key.prompt": "API key de Command Code{0}: ",
-    "setup.port.prompt": "Puerto del shim [{0}]: ",
-    "setup.autostart.prompt": "¿Querés habilitar inicio automático al iniciar sesión? [Y/n]: ",
+    "setup.port.prompt": "Puerto de OpenCommandGo [{0}]: ",
+    "setup.autostart.prompt": "¿Desea habilitar inicio automático al iniciar sesión? [Y/n]: ",
     "setup.synced": "OpenCode quedó configurado en: {0}",
-    "setup.not_detected": "OpenCode no está detectado todavía. Guardé la config del shim igual.",
+    "setup.not_detected": "OpenCode no está detectado todavía. Guardé la config de OpenCommandGo igual.",
     "setup.autostart.enabled": "Inicio automático habilitado.",
     "setup.autostart.disabled": "Inicio automático deshabilitado.",
     "setup.config_saved": "Config guardada en: {0}",
@@ -153,8 +153,8 @@ Commands:
     "start.refreshing": "Refrescando catálogo de modelos...",
     "start.updated": "Catálogo actualizado.",
     "start.warning": "Advertencia: no se pudo actualizar el catálogo, iniciando de todos modos.",
-    "start.already_running": "Shim ya está corriendo con PID {0}.",
-    "start.launched": "Shim lanzado en background con PID {0}.",
+    "start.already_running": "OpenCommandGo ya está corriendo con PID {0}.",
+    "start.launched": "OpenCommandGo lanzado en background con PID {0}.",
 
     // -- Server --
     "server.listening": "opencg-cli escuchando en http://{0}:{1}",
@@ -162,7 +162,7 @@ Commands:
     // -- Stop --
     "stop.no_pid": "No hay PID guardado.",
     "stop.already_gone": "El proceso ya no existía; limpié el PID.",
-    "stop.stopped": "Shim detenido (PID {0}).",
+    "stop.stopped": "OpenCommandGo detenido (PID {0}).",
 
     // -- Status --
     "status.shim": "Shim: {0} ({1}:{2})",
@@ -179,13 +179,13 @@ Commands:
     "status.cli_detected": "CLI detectado: {0}",
     "status.autostart_enabled": "Autostart habilitado: {0}",
     "status.autostart_provider": "Autostart proveedor: {0}",
-    "status.models_count": "Modelos útiles en catálogo: {0}",
+    "status.models_count": "Modelos disponibles en catálogo: {0}",
 
     // -- Doctor --
     "doctor.api_key": "API key: {0}",
     "doctor.ok": "ok",
     "doctor.missing": "faltante",
-    "doctor.shim_health": "Shim health: {0}",
+    "doctor.shim_health": "OpenCommandGo health: {0}",
     "doctor.up": "ok",
     "doctor.down": "caído",
     "doctor.opencode_config": "OpenCode config detectada: {0}",
@@ -195,16 +195,16 @@ Commands:
     "doctor.compat_matrix": "Compat matrix: {0}",
     "doctor.autostart": "Autostart configurado: {0}",
     "doctor.autostart_provider": "Autostart proveedor: {0}",
-    "doctor.models": "Modelos útiles en catálogo: {0}",
+    "doctor.models": "Modelos disponibles en catálogo: {0}",
 
     // -- Refresh --
     "refresh.start": "Refrescando catálogo y compatibilidad de modelos...",
     "refresh.catalog": "Catálogo: {0}",
     "refresh.model_start": "[{0}/{1}] {2}...",
     "refresh.model_done": "  -> {0}",
-    "refresh.complete": "Refresh completo. Modelos útiles: {0}",
-    "refresh.probe_warning": "Advertencia: verificar disponibilidad real consumirá tokens/créditos en Command Code.",
-    "refresh.probe_confirm": "¿Querés continuar con los probes? [y/N]: ",
+    "refresh.complete": "Refresh completo. Modelos disponibles: {0}",
+    "refresh.probe_warning": "Advertencia: verificar disponibilidad real consumirá tokens/créditos de su suscripción Go en Command Code.",
+    "refresh.probe_confirm": "¿Desea continuar con los probes? [y/N]: ",
 
     // -- API key --
     "setapikey.prompt": "Nueva API key de Command Code{0}: ",
@@ -212,8 +212,8 @@ Commands:
 
     // -- Errors --
     "error.required": "Ese valor es obligatorio.",
-    "error.missing_api_key": "Falta API key. Corré: ocg setup o ocg set-api-key",
-    "error.host_not_allowed": "Host no permitido para uso local: {0}. Usá 127.0.0.1 o localhost.",
+    "error.missing_api_key": "Falta API key. Ejecute: ocg setup o ocg set-api-key",
+    "error.host_not_allowed": "Host no permitido para uso local: {0}. Utilice 127.0.0.1 o localhost.",
     "error.upstream": "Command Code respondió {0}: {1}",
     "error.upstream_no_body": "Command Code no devolvió body de streaming",
     "error.upstream_stream": "Error en stream de Command Code: {0}",

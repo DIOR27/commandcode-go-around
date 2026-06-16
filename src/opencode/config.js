@@ -30,7 +30,7 @@ export function syncOpenCodeConfig({ providerId, host, port, compatibilityMatrix
   config.provider ||= {}
   config.provider[providerId] = {
     npm: "@ai-sdk/openai-compatible",
-    name: "OpenCG CLI",
+    name: "OCG CommandCode",
     options: {
       baseURL: `http://${host}:${port}/v1`,
       headers: {
