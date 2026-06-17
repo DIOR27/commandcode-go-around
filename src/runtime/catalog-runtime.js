@@ -77,11 +77,12 @@ export function createCatalogController({ initialCompatibilityMatrix, writeCompa
 
       if (!verifyAvailability || probeMode === "catalog") {
         for (const row of catalog) {
-          const { id, name, context_length, catalog_capabilities } = row
+          const { id, name, context_length, catalog_capabilities, tags } = row
           const previous = compatibilityMatrix?.models?.[id]
           next.models[id] = buildCatalogOnlyCompatibilityEntry({
             id,
             name,
+            tags,
             context_length,
             catalogCapabilities: catalog_capabilities,
             previous,
@@ -105,7 +106,7 @@ export function createCatalogController({ initialCompatibilityMatrix, writeCompa
 
       const runOne = async rowIndex => {
         const row = catalog[rowIndex]
-        const { id, name, context_length, catalog_capabilities } = row
+        const { id, name, context_length, catalog_capabilities, tags } = row
         options.onProgress?.({
           type: "model-start",
           index: rowIndex + 1,
@@ -115,6 +116,7 @@ export function createCatalogController({ initialCompatibilityMatrix, writeCompa
 
         const tested = await testModelCompatibility(id, name, settings, {
           catalogCapabilities: catalog_capabilities,
+          tags,
           probeMode,
         })
         tested.context_length = resolveContextWindow(id, context_length)
@@ -124,6 +126,7 @@ export function createCatalogController({ initialCompatibilityMatrix, writeCompa
           next.models[id] = {
             ...previous,
             name,
+            tags,
             context_length: resolveContextWindow(id, context_length),
             capabilities: mergeCapabilities(previous?.capabilities, tested.capabilities),
             tested_at: tested.tested_at,
@@ -245,10 +248,12 @@ function buildModelDescriptor(model, compat) {
 
 async function testModelCompatibility(model, displayName, settings, options = {}) {
   const catalogVision = normalizeCatalogVisionCapability(options.catalogCapabilities?.vision)
+  const catalogReasoning = normalizeCatalogFileCapability(options.catalogCapabilities?.reasoning)
   const probeMode = options.probeMode === "fast" ? "fast" : "full"
   const probeTimeoutMs = probeMode === "fast" ? REFRESH_PROBE_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS
   const summary = {
     name: displayName,
+    tags: Array.isArray(options.tags) ? options.tags : [],
     tested_at: new Date().toISOString(),
     status: "unknown",
     text: { ok: false, output_chars: 0 },
@@ -267,6 +272,7 @@ async function testModelCompatibility(model, displayName, settings, options = {}
       pdf: normalizeCatalogFileCapability(options.catalogCapabilities?.pdf),
       audio: normalizeCatalogFileCapability(options.catalogCapabilities?.audio),
       video: normalizeCatalogFileCapability(options.catalogCapabilities?.video),
+      reasoning: catalogReasoning,
     },
     notes: [],
   }
@@ -351,7 +357,14 @@ async function testModelCompatibility(model, displayName, settings, options = {}
         max_tokens: 256,
       }, model, settings, { timeoutMs: probeTimeoutMs })
       const reasoning = collectReasoning(reasoningRun.events)
-      summary.reasoning = { ok: reasoning.length > 0, chars: reasoning.length }
+      const reasoningOk = reasoning.length > 0
+      summary.reasoning = { ok: reasoningOk, chars: reasoning.length }
+      if (reasoningOk) {
+        summary.capabilities.reasoning = {
+          supported: true,
+          source: summary.capabilities.reasoning?.source || "probe",
+        }
+      }
       if (!reasoning.length) summary.notes.push("No emitió reasoning visible.")
     } catch (error) {
       summary.notes.push(`Reasoning error: ${error instanceof Error ? error.message : String(error)}`)
@@ -413,10 +426,11 @@ function resolveRefreshConcurrency(value, probeMode, modelCount) {
   return Math.max(1, Math.min(normalized, Math.max(1, modelCount)))
 }
 
-function buildCatalogOnlyCompatibilityEntry({ id, name, context_length, catalogCapabilities, previous }) {
+function buildCatalogOnlyCompatibilityEntry({ id, name, tags, context_length, catalogCapabilities, previous }) {
   const contextWindow = resolveContextWindow(id, context_length)
   return {
     name,
+    tags: Array.isArray(tags) ? tags : (previous?.tags || []),
     tested_at: previous?.tested_at || null,
     status: "catalog_only",
     text: previous?.text || { ok: null, output_chars: 0 },
@@ -434,6 +448,7 @@ function buildCatalogOnlyCompatibilityEntry({ id, name, context_length, catalogC
       pdf: normalizeCatalogFileCapability(catalogCapabilities?.pdf),
       audio: normalizeCatalogFileCapability(catalogCapabilities?.audio),
       video: normalizeCatalogFileCapability(catalogCapabilities?.video),
+      reasoning: normalizeCatalogFileCapability(catalogCapabilities?.reasoning),
     }),
     notes: ["Catálogo sincronizado sin probes de disponibilidad."],
     context_length: contextWindow,

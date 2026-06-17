@@ -1,13 +1,13 @@
 import { createServer } from "node:http"
-import { appendFileSync } from "node:fs"
 import { getPaths, ensureDir } from "../config/paths.js"
 import { clearPid, getRuntimeSettings, readCompatibilityMatrix, writeCompatibilityMatrix, writePid } from "../config/store.js"
 import { MODEL_SET } from "../shared/models.js"
-import { rotateLogIfNeeded } from "../shared/log-rotation.js"
 import { t } from "../shared/i18n.js"
 import { buildOpenAICompletion, callCommandCodeAlpha, startCommandCodeAlphaStream, streamOpenAIResponse, summarizeIncomingMessages } from "./chat-bridge.js"
 import { createCatalogController } from "./catalog-runtime.js"
 import { isLoopbackHost, json, openAIError, readJson, requireShimAuth } from "./http-utils.js"
+import { installProcessLifecycleHandlers } from "./lifecycle.js"
+import { runtimeLog } from "./runtime-log.js"
 
 let currentServer = null
 
@@ -129,15 +129,7 @@ export async function startServer() {
 
   currentServer = server
   writePid(process.pid)
-  process.on("exit", () => clearPid())
-  process.on("SIGINT", () => {
-    clearPid()
-    process.exit(0)
-  })
-  process.on("SIGTERM", () => {
-    clearPid()
-    process.exit(0)
-  })
+  installProcessLifecycleHandlers({ clearPid })
 
   log(`LISTEN http://${settings.host}:${settings.port}`)
   console.log(t("server.listening", settings.host, settings.port))
@@ -146,8 +138,5 @@ export async function startServer() {
 }
 
 function log(line) {
-  const paths = getPaths()
-  ensureDir(paths.logDir)
-  rotateLogIfNeeded(paths.logFile)
-  appendFileSync(paths.logFile, `[${new Date().toISOString()}] ${line}\n`)
+  runtimeLog(line)
 }

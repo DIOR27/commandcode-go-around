@@ -49,6 +49,10 @@ describe("ocg CLI integration", () => {
     assert.equal(provider.name, "OCG CommandCode")
     assert.equal(provider.options?.baseURL, `http://127.0.0.1:${ctx.port}/v1`)
     assert.equal(provider.options?.headers?.["x-ocg-token"], secrets.shimAccessToken)
+    assert.deepStrictEqual(provider.models["xiaomi/MiMo-V2.5"]?.modalities?.input, ["text", "image", "pdf", "audio", "video"])
+    assert.equal(provider.models["xiaomi/MiMo-V2.5"]?.capabilities?.audio?.supported, true)
+    assert.equal(provider.models["xiaomi/MiMo-V2.5"]?.capabilities?.video?.supported, true)
+    assert.equal(provider.models["xiaomi/MiMo-V2.5"]?.reasoning, true)
 
     const second = await runCli(["start", "--background"], ctx.env)
     assert.equal(second.code, 0, second.stderr)
@@ -406,6 +410,102 @@ describe("ocg chat/completions integration", () => {
     assert.match(streamed.text, /"tool_calls"/)
     assert.match(streamed.text, /"name":"echo"/)
     assert.match(streamed.text, /"finish_reason":"tool_calls"/)
+  })
+
+  it("survives upstream stream error events and closes the SSE stream", { timeout: 20000 }, async () => {
+    const mock = await startMockCommandCodeServer()
+    const ctx = createIsolatedCliContext(await getFreePort(), mock.port)
+    registerCleanup(ctx, mock)
+
+    await runCli(["start", "--background"], ctx.env)
+    const secrets = readJson(ctx.paths.secretsFile)
+    await waitForHealth(ctx.port, secrets.shimAccessToken)
+
+    mock.enqueueAlphaResponse({
+      status: 200,
+      streamChunks: [
+        "data: {\"type\":\"text-delta\",\"text\":\"Hola\"}\n\n",
+        "data: {\"type\":\"error\",\"message\":\"boom\"}\n\n",
+        "data: [DONE]\n\n",
+      ],
+    })
+
+    const streamed = await postJsonStream(`http://127.0.0.1:${ctx.port}/v1/chat/completions`, {
+      model: "xiaomi/MiMo-V2.5",
+      stream: true,
+      messages: [{ role: "user", content: "hola" }],
+    }, secrets.shimAccessToken)
+
+    assert.equal(streamed.status, 200)
+    assert.match(streamed.text, /"content":"Hola"/)
+    assert.match(streamed.text, /"finish_reason":"stop"/)
+    assert.match(streamed.text, /data: \[DONE\]/)
+  })
+
+  it("preserves assistant tool calls and tool results in upstream roundtrip payload", { timeout: 20000 }, async () => {
+    const mock = await startMockCommandCodeServer()
+    const ctx = createIsolatedCliContext(await getFreePort(), mock.port)
+    registerCleanup(ctx, mock)
+
+    await runCli(["start", "--background"], ctx.env)
+    const secrets = readJson(ctx.paths.secretsFile)
+    await waitForHealth(ctx.port, secrets.shimAccessToken)
+
+    mock.enqueueAlphaResponse({
+      status: 200,
+      body: sseText([
+        { type: "text-delta", text: "resultado final" },
+        { type: "finish", finishReason: "stop", totalUsage: { inputTokens: 7, outputTokens: 4 } },
+      ]),
+    })
+
+    const response = await postJson(`http://127.0.0.1:${ctx.port}/v1/chat/completions`, {
+      model: "xiaomi/MiMo-V2.5",
+      messages: [
+        { role: "user", content: "calculá" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "call_roundtrip",
+              type: "function",
+              function: {
+                name: "sum",
+                arguments: "{\"a\":1,\"b\":2}",
+              },
+            },
+          ],
+        },
+        {
+          role: "tool",
+          tool_call_id: "call_roundtrip",
+          content: "{\"result\":3}",
+        },
+      ],
+    }, secrets.shimAccessToken)
+
+    assert.equal(response.status, 200)
+    assert.equal(response.json.choices[0].message.content, "resultado final")
+
+    const upstream = mock.takeAlphaRequests()
+    assert.equal(upstream[0].payload.params.messages[1].role, "assistant")
+    assert.equal(upstream[0].payload.params.messages[1].content[0].type, "tool-call")
+    assert.equal(upstream[0].payload.params.messages[1].content[0].toolName, "sum")
+    assert.deepStrictEqual(upstream[0].payload.params.messages[2], {
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId: "call_roundtrip",
+          toolName: "sum",
+          output: {
+            type: "text",
+            value: "{\"result\":3}",
+          },
+        },
+      ],
+    })
   })
 })
 
