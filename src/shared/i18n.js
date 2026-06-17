@@ -79,6 +79,10 @@ const messages = {
     "doctor.catalog_age": "Catalog updated: {0}",
     "doctor.autostart": "Autostart configured: {0}",
     "doctor.autostart_provider": "Autostart provider: {0}",
+    "doctor.watchdog": "Watchdog: {0}",
+    "doctor.watchdog_active": "active",
+    "doctor.watchdog_inactive": "inactive",
+    "doctor.watchdog_restarts": "({0} restarts)",
     "doctor.models": "Useful models in catalog: {0}",
 
     // -- Refresh --
@@ -246,6 +250,10 @@ Commands:
     "doctor.catalog_age": "Catálogo actualizado: {0}",
     "doctor.autostart": "Autostart configurado: {0}",
     "doctor.autostart_provider": "Autostart proveedor: {0}",
+    "doctor.watchdog": "Watchdog: {0}",
+    "doctor.watchdog_active": "activo",
+    "doctor.watchdog_inactive": "inactivo",
+    "doctor.watchdog_restarts": "({0} reinicios)",
     "doctor.models": "Modelos disponibles en catálogo: {0}",
 
     // -- Refresh --
