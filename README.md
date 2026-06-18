@@ -1,6 +1,6 @@
 # OpenCommandGo
 
-CLI shim to use Command Code Go subscription models and OpenRouter free models from OpenCode through a local OpenAI-compatible bridge.
+CLI shim to use Command Code subscription models and OpenRouter free models from OpenCode through a local OpenAI-compatible bridge.
 
 **Binary:** `ocg`
 
@@ -84,7 +84,7 @@ Provider names:
 
 Base URLs:
 
-- `http://127.0.0.1:4310/cmdshim/v1`
+- `http://127.0.0.1:4310/ocg/v1`
 - `http://127.0.0.1:4310/openrouter/v1`
 
 The shim writes an internal header so that OpenCode is the only valid client of the local provider.
@@ -163,9 +163,9 @@ Recommended:
 
 ## QA and Release
 
-- CI: `C:\Users\diego\OneDrive\Documentos\commandcode-go-around\.github\workflows\ci.yml`
-- Tagged npm publish: `C:\Users\diego\OneDrive\Documentos\commandcode-go-around\.github\workflows\publish.yml`
-- Develop → main auto-release gate: `C:\Users\diego\OneDrive\Documentos\commandcode-go-around\.github\workflows\auto-release.yml`
+- CI: `.github/workflows/ci.yml`
+- Tagged npm publish: `.github/workflows/publish.yml`
+- Develop → main auto-release gate: `.github/workflows/auto-release.yml`
 
 ## Current Limitations
 

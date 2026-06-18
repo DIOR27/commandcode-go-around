@@ -13,7 +13,6 @@ export function getProjectDir() {
 
 export function getAppDataRoot() {
   if (process.env.OCG_HOME) return process.env.OCG_HOME
-  if (process.env.COMMANDCODE_SHIM_HOME) return process.env.COMMANDCODE_SHIM_HOME
   if (process.platform === "win32") {
     return process.env.APPDATA || join(homedir(), "AppData", "Roaming")
   }

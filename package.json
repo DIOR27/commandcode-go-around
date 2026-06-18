@@ -26,6 +26,14 @@
     "node": ">=20"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DIOR27/OpenCommandGo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DIOR27/OpenCommandGo/issues"
+  },
+  "homepage": "https://github.com/DIOR27/OpenCommandGo#readme",
   "keywords": [
     "commandcode",
     "opencode",
