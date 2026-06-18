@@ -577,7 +577,35 @@ describe("ocg openrouter integration", () => {
     const upstream = openRouterMock.takeChatRequests()
     assert.equal(upstream.length, 1)
     assert.equal(upstream[0].headers.authorization, "Bearer test-openrouter-key")
+    assert.equal(upstream[0].headers["http-referer"], "https://github.com/DIOR27/OpenCommandGo")
+    assert.equal(upstream[0].headers["x-openrouter-title"], "OpenCommandGo")
+    assert.equal(upstream[0].headers["x-openrouter-categories"], "cli-agent")
     assert.equal(upstream[0].payload.model, "meta-llama/llama-4-scout:free")
+  })
+
+  it("clamps oversized max_tokens for OpenRouter requests", { timeout: 20000 }, async () => {
+    const commandCodeMock = await startMockCommandCodeServer()
+    const openRouterMock = await startMockOpenRouterServer()
+    const ctx = createIsolatedCliContext(await getFreePort(), commandCodeMock.port, {
+      openRouterPort: openRouterMock.port,
+      openRouterApiKey: "test-openrouter-key",
+    })
+    registerCleanup(ctx, commandCodeMock, openRouterMock)
+
+    await runCli(["start", "--background"], ctx.env)
+    const secrets = readJson(ctx.paths.secretsFile)
+    await waitForHealth(ctx.port, secrets.shimAccessToken)
+
+    const response = await postJson(`http://127.0.0.1:${ctx.port}/openrouter/v1/chat/completions`, {
+      model: "meta-llama/llama-4-scout:free",
+      max_tokens: 50000,
+      messages: [{ role: "user", content: "hola" }],
+    }, secrets.shimAccessToken)
+
+    assert.equal(response.status, 200)
+    const upstream = openRouterMock.takeChatRequests()
+    assert.equal(upstream.length, 1)
+    assert.equal(upstream[0].payload.max_tokens, 8192)
   })
 
   it("normalizes multimodal image payloads before forwarding to OpenRouter", { timeout: 20000 }, async () => {

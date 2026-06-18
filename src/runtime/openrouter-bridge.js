@@ -1,4 +1,5 @@
 const UPSTREAM_TIMEOUT_MS = 120000
+const OPENROUTER_MAX_TOKENS_CAP = 8192
 
 export async function callOpenRouter(body, settings) {
   const payload = buildOpenRouterPayload(body)
@@ -89,10 +90,15 @@ export async function pipeOpenRouterStream(res, upstreamResponse) {
 }
 
 export function buildOpenRouterPayload(body) {
-  return {
+  const payload = {
     ...body,
     messages: normalizeOpenRouterMessages(body?.messages),
   }
+  const maxTokens = normalizeClampedMaxTokens(body?.max_tokens)
+  if (typeof maxTokens === "number") {
+    payload.max_tokens = maxTokens
+  }
+  return payload
 }
 
 function normalizeOpenRouterMessages(messages) {
@@ -229,5 +235,23 @@ function buildOpenRouterHeaders(settings) {
     "Authorization": `Bearer ${settings.openRouterApiKey}`,
     "Content-Type": "application/json",
     "Accept": "application/json",
+    "HTTP-Referer": firstNonEmpty(settings.openRouterReferer, process.env.OPENROUTER_REFERER, "https://github.com/DIOR27/OpenCommandGo"),
+    "X-OpenRouter-Title": firstNonEmpty(settings.openRouterTitle, process.env.OPENROUTER_TITLE, "OpenCommandGo"),
+    "X-OpenRouter-Categories": firstNonEmpty(settings.openRouterCategories, process.env.OPENROUTER_CATEGORIES, "cli-agent"),
+    "X-Title": firstNonEmpty(settings.openRouterTitle, process.env.OPENROUTER_TITLE, "OpenCommandGo"),
   }
+}
+
+function normalizeClampedMaxTokens(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined
+  }
+  return Math.min(Math.trunc(value), OPENROUTER_MAX_TOKENS_CAP)
+}
+
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim()
+  }
+  return ""
 }
